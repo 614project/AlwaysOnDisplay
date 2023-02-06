@@ -25,6 +25,10 @@ class Program
         {
             File.WriteAllBytes("cache\\font.ttf", AlwaysOnDisplay.Properties.Resources.font);
         }
+        if (!File.Exists("cache\\icon.png"))
+        {
+            AlwaysOnDisplay.Properties.Resources.Jyunrcaea_FrameworkIcon.Save("cache\\icon.png");
+        }
         Framework.MultiCoreProcess = true;
         Framework.BackgroundColor = new(0, 0, 0);
         Framework.Init("Always On Display", 960, 614, null, null, new(true,false,false,true));
@@ -33,6 +37,7 @@ class Program
         Display.AddScene(wc = new Welcome());
         Task.Run(() =>
         {
+            Window.Icon("cache\\icon.png");
             Display.AddScene(ms = new MainScene());
             Display.AddScene(cc = new Clock());
             Display.AddScene(new WindowStatus());

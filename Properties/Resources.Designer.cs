@@ -69,5 +69,15 @@ namespace AlwaysOnDisplay.Properties {
                 return ((byte[])(obj));
             }
         }
+        
+        /// <summary>
+        ///   System.Drawing.Bitmap 형식의 지역화된 리소스를 찾습니다.
+        /// </summary>
+        internal static System.Drawing.Bitmap Jyunrcaea_FrameworkIcon {
+            get {
+                object obj = ResourceManager.GetObject("Jyunrcaea_FrameworkIcon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
     }
 }

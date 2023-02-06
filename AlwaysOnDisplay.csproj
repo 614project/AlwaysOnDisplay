@@ -7,7 +7,22 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>False</UseWindowsForms>
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <ApplicationIcon>Properties\Jyunrcaea_FrameworkIcon (1).ico</ApplicationIcon>
+    <Title>Always On Display</Title>
+    <Company>Jyunrcaea!</Company>
+    <Product>Always On Display</Product>
+    <Authors>614project</Authors>
+    <Description>화면보호기보다 멋진 Always On Display 프로그램!</Description>
+    <PackageProjectUrl>https://github.com/614project/AlwaysOnDisplay</PackageProjectUrl>
+    <PackageIcon>Jyunrcaea!FrameworkIcon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/614project/AlwaysOnDisplay</RepositoryUrl>
+    <PackAsTool>True</PackAsTool>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Properties\Jyunrcaea_FrameworkIcon (1).ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="7.0.0" />
@@ -63,6 +78,14 @@
     </None>
     <None Update="libwebp-7.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Properties\Jyunrcaea!FrameworkIcon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Update="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
     </None>
     <None Update="zlib1.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
