@@ -22,7 +22,7 @@ class Program
     {
         if (!Directory.Exists("cache"))
         {
-            DirectoryInfo info = Directory.CreateDirectory("cache");
+            DirectoryInfo info = Directory.CreateDirectory("cache");    
             info.Attributes = FileAttributes.Directory | FileAttributes.Hidden;
         }
         if (!File.Exists("cache\\font.ttf"))
@@ -185,7 +185,7 @@ class BatteryStatus : TextboxForAnimation
     {
         top = true;
         this.MoveAnimationState.CompleteFunction = UpEnd;
-        this.Move(null, (int)(Window.Height * -0.2f), MainScene.MonitoringTextPositionChangeTime);
+        this.Move(null, (int)(Window.Height * -0.15f), MainScene.MonitoringTextPositionChangeTime);
     }
 
     public override void Start()
@@ -237,7 +237,7 @@ class BatteryStatus : TextboxForAnimation
     public override void Resize()
     {
         this.Size = (int)(14 * Window.AppropriateSize);
-        if (top) this.MoveAnimationState.ModifyArrivalPoint(null, (int)(Window.Height * -0.2f));
+        if (top) this.MoveAnimationState.ModifyArrivalPoint(null, (int)(Window.Height * -0.15f));
         else this.MoveAnimationState.ModifyArrivalPoint(null, (int)(-6 * Window.AppropriateSize));
         base.Resize();
     }
@@ -498,7 +498,7 @@ class Clock : Scene
 
 class MainScene : Scene
 {
-    public const float MonitoringTextPositionChangeTime = 180000f;
+    public const float MonitoringTextPositionChangeTime = 600000f;
 
     public MainScene()
     {
