@@ -1,4 +1,4 @@
-# AlwaysOnDisplay
+# Always On Display
 
 ![image](https://user-images.githubusercontent.com/71429443/217075924-de02f99b-6b10-4c82-911f-ca30466cd4f5.png)
 
