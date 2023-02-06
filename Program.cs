@@ -1,22 +1,18 @@
 ﻿using JyunrcaeaFramework;
-using System.Data;
 using System.Management;
-using Windows.System;
 using Windows.Devices.Enumeration;
 using Windows.Devices.Bluetooth;
-using Microsoft.VisualBasic;
 using System.Diagnostics;
-using Windows.ApplicationModel.Wallet;
-using System.Runtime.CompilerServices;
+using AlwaysOnDisplay;
+using Windows.UI.Notifications.Management;
 using Windows.UI.Notifications;
+using Windows.Foundation.Metadata;
 
 class Program
 {
-
-    public static Clock cc;
-    public static MainScene ms;
-    public static Welcome wc;
-    public static curt ct;
+    public static Clock cc = null!;
+    public static MainScene ms = null!;
+    public static Welcome wc = null!;
     
     static void Main(string[] args)
     {
@@ -31,18 +27,19 @@ class Program
         }
         Framework.MultiCoreProcess = true;
         Framework.BackgroundColor = new(0, 0, 0);
-        Framework.Init("Always On Display", 720, 480, null, null, new());
+        Framework.Init("Always On Display", 960, 614, null, null, new(true,false,false,true));
+        Window.Opacity = 0f;
+        Framework.Function = new CustomFF();
         Display.AddScene(wc = new Welcome());
         Task.Run(() =>
         {
             Display.AddScene(ms = new MainScene());
             Display.AddScene(cc = new Clock());
-            Display.AddScene(new WindowState());
-            Display.AddScene(ct = new curt());
-            wc.Finish();
+            Display.AddScene(new WindowStatus());
+            Framework.Function.Resize();
+            Display.RemoveScene(wc);
+            ms.Hide = cc.Hide = false;
         });
-        //절반 제한
-        Display.FrameLateLimit = Display.FrameLateLimit / 2;
         Framework.Run();
     }
 
@@ -72,6 +69,33 @@ class Program
         }
 
         return info;
+    }
+}
+
+class CustomFF : FrameworkFunction
+{
+    public override void Start()
+    {
+        base.Start();
+        Task.Run(() =>
+        {
+            Window.Show = true;
+            Mouse.HideCursor = true;
+            Window.Raise();
+            while (Window.Opacity < 1f)
+            {
+                Window.Opacity += 0.01f;
+                Thread.Sleep(10);
+            }
+        });
+    }
+
+
+
+    public override void WindowQuit()
+    {
+        base.WindowQuit();
+        Framework.Stop();
     }
 }
 
@@ -329,8 +353,8 @@ class Ramcounter : TextboxForAnimation
     {
         if (uptime < Framework.RunningTime)
         {
-            uptime += 1000f;
-
+            uptime += 500f;
+            
             this.Text = $"여유 메모리: {theMemCounter.NextValue()}MB";
 
         }
@@ -361,13 +385,14 @@ class Ramcounter : TextboxForAnimation
 
 class BluetoothList : TextboxForAnimation
 {
-    public BluetoothList() : base("cache/font.ttf", 10, "블루투스 확인중...")
+    public BluetoothList() : base("cache/font.ttf", 12, "블루투스 확인중...")
     {
         this.OriginX = HorizontalPositionType.Right;
         this.DrawX = HorizontalPositionType.Left;
         this.OriginY = VerticalPositionType.Bottom;
         this.DrawY = VerticalPositionType.Top;
         this.X = this.Y = -8;
+        this.Blended = true;
     }
 
     float Uptime = 0f;
@@ -410,7 +435,7 @@ class BluetoothList : TextboxForAnimation
 
     public override void Resize()
     {
-        this.Size = (int)(10 * Window.AppropriateSize);
+        this.Size = (int)(12 * Window.AppropriateSize);
         this.Y = (int)(-8 * Window.AppropriateSize);
         if (right) this.X = this.Y;
         else this.X = -this.Y;
@@ -457,8 +482,8 @@ class Clock : Scene
     void DownEnd()
     {
         top = true;
-        dt.Move(null, (int)(Window.Height * -0.5f) + (int)(40 * Window.AppropriateSize), 3600000f);
-        tt.Move(null, (int)(Window.Height * -0.5f), 3600000f);
+        dt.Move(null, (int)(Window.Height * -0.25f) + (int)(40 * Window.AppropriateSize), 3600000f);
+        tt.Move(null, (int)(Window.Height * -0.25f), 3600000f);
         tt.MoveAnimationState.CompleteFunction = UpEnd;
     }
 
@@ -467,8 +492,8 @@ class Clock : Scene
         half = (int)(Window.Width * 0.5f);
         if (top)
         {
-            tt.MoveAnimationState.ModifyArrivalPoint(null, (int)(Window.Height * -0.5f));
-            dt.MoveAnimationState.ModifyArrivalPoint(null, (int)(Window.Height * -0.5f) + (int)(40 * Window.AppropriateSize));
+            tt.MoveAnimationState.ModifyArrivalPoint(null, (int)(Window.Height * -0.25f));
+            dt.MoveAnimationState.ModifyArrivalPoint(null, (int)(Window.Height * -0.25f) + (int)(40 * Window.AppropriateSize));
         } else
         {
             tt.MoveAnimationState.ModifyArrivalPoint(null, (int)(Window.Height * 0.1f));
@@ -507,19 +532,7 @@ class MainScene : Scene
         this.AddSprite(new BluetoothList());
         this.AddSprite(new CPUcounter());
         this.AddSprite(new Ramcounter());
-    }
-
-    public override void Start()
-    {
-        base.Start();
-        //Jyunrcaea! Framework 0.5.x 에 구현할 기능
-        SDL2.SDL.SDL_ShowCursor(0);
-    }
-
-    public override void WindowQuit()
-    {
-        base.WindowQuit();
-        Framework.Stop();
+        this.AddSprite(new NoticeText());
     }
 
     public static bool wf = false;
@@ -539,12 +552,12 @@ class MainScene : Scene
     }
 }
 
-class WindowState : Scene
+class WindowStatus : Scene
 {
     StateText t;
     StateBackground b;
 
-    public WindowState()
+    public WindowStatus()
     {
         this.AddSprite(b = new());
         this.AddSprite(t = new());
@@ -557,14 +570,15 @@ class WindowState : Scene
         base.Start();
         t.Resize();
         b.Resize();
+        Show("'F11' 키를 눌러 전체화면으로 전환할수 있습니다.");
     }
 
     public override void Resized()
     {
         t.Y = b.Y = (int)(Window.Height * 0.2f);
-        t.Size = (int)(24 * Window.AppropriateSize);
-        b.Width = (int)(400 * Window.AppropriateSize);
-        b.Height = t.Size * 2;
+        t.Size = (int)(18 * Window.AppropriateSize);
+        b.Width = (int)(300 * Window.AppropriateSize);
+        b.Height = (int)(t.Size * 1.8f);
         if (MainScene.wf)
         {
             MainScene.wf = false;
@@ -576,8 +590,9 @@ class WindowState : Scene
     public void Show(string text)
     {
         t.Text = text;
-        t.Opacity(200, 200f);
-        b.Opacity(200, 200f);
+        t.Hide = b.Hide = false;
+        t.Opacity(180, 200f);
+        b.Opacity(180, 200f);
     }
 }
 
@@ -588,7 +603,8 @@ class StateText : TextboxForAnimation
         this.FontColor = new(0, 0, 0);
         this.OpacityAnimationState.CompleteFunction = () =>
         {
-            this.Opacity(0, 200f, 500f);
+            if (this.OpacityAnimationState.TargetOpacity == 0) this.Hide = true;
+            else this.Opacity(0, 400f, 500f);
         };
     }
 
@@ -600,69 +616,29 @@ class StateBackground : RectangleForAnimation
     {
         this.OpacityAnimationState.CompleteFunction = () =>
         {
-            this.Opacity(0, 200f, 500f);
+            if (this.OpacityAnimationState.TargetOpacity == 0) this.Hide = true;
+            else this.Opacity(0, 400f, 500f);
         };
-    }
-}
-
-class curt : Scene
-{
-    backgroundcolor c;
-
-    public curt()
-    {
-        this.AddSprite(c = new(new(0, 0, 0)));
-    }
-
-    public override void Start()
-    {
-        base.Start();
-        Program.cc.Hide = Program.ms.Hide = false;
-    }
-
-    public void Finish()
-    {
-        c.OpacityAnimationState.CompleteFunction = () =>
-        {
-            Display.RemoveScene(this);
-        };
-        c.Opacity(0, 200f);
     }
 }
 
 class Welcome : Scene
 {
-    backgroundcolor c;
-    welcometext t;
-
     public Welcome()
     {
-        this.AddSprite(c = new backgroundcolor(new()));
-        this.AddSprite(t = new welcometext());
+        this.AddSprite(new backgroundcolor());
+        this.AddSprite(new welcometext());
+        this.AddSprite(new Madeby());
+        this.AddSprite(new JF());
     }
 
-    public void Finish()
-    {
-        t.OpacityAnimationState.CompleteFunction = () =>
-        {
-            Display.RemoveScene(this);
-            Program.ct.Finish();
-        };
-        c.Opacity(0, 200f);
-        t.Opacity(0, 200f);
-    }
 }
 
-class backgroundcolor : RectangleForAnimation
+class backgroundcolor : Rectangle
 {
-    public backgroundcolor(Color color) : base(Window.Width,Window.Height)
+    public backgroundcolor() : base(Window.Width,Window.Height)
     {
-        this.Color = color;
-    }
 
-    public override void Start()
-    {
-        base.Start();
     }
 
     public override void Resize()
@@ -673,20 +649,161 @@ class backgroundcolor : RectangleForAnimation
     }
 }
 
-class welcometext : SpriteForAnimation
+class welcometext : Sprite
 {
-    public welcometext() : base(new TextureFromText("cache\\font.ttf", 48, "Always On Display", new(0,0,0))) {
-
-    }
-
-    public override void Start()
-    {
-        base.Start();
+    public welcometext() : base(new TextureFromText("cache\\font.ttf", 50, "Always On Display", new(0,0,0))) {
+        //this.Size = 0.5f;
     }
 
     public override void Resize()
     {
         this.Size = Window.AppropriateSize;
         base.Resize();
+    }
+}
+
+class JF : Sprite
+{
+    public JF() : base(new TextureFromStringForXPM(JFImage.result))
+    {
+        this.OriginY = VerticalPositionType.Bottom;
+        this.DrawY = VerticalPositionType.Top;
+        this.Y = -8;
+        this.Size = 0.5f;
+    }
+
+    public override void Resize()
+    {
+        this.Size = 0.5f * Window.AppropriateSize;
+        base.Resize();
+    }
+}
+
+class Madeby : Sprite
+{
+    public Madeby() : base(new TextureFromText("cache\\font.ttf",18,"Made by 614project",new(0,0,0))) {
+        this.OriginX = HorizontalPositionType.Right;
+        this.DrawX = HorizontalPositionType.Left;
+        this.OriginY = VerticalPositionType.Bottom;
+        this.DrawY = VerticalPositionType.Top;
+        this.X =  this.Y = -8;
+    }
+
+    public override void Resize()
+    {
+        this.Size = Window.AppropriateSize;
+        base.Resize();
+    }
+}
+
+class NoticeText : TextboxForAnimation, KeyDownEventInterface
+{
+    public NoticeText() : base("cache\\font.ttf",16,"활성화 된 알림은 'Backspace' 키로 삭제하실수 있습니다.")
+    {
+        this.Opacity(0);
+        this.OpacityAnimationState.CompleteFunction = () =>
+        {
+            if (this.OpacityAnimationState.TargetOpacity == 0)
+            {
+                this.Hide = true;
+                removed = false;
+                this.needsetopacity = true;
+            } else
+            {
+                this.needsetopacity = false;
+            }
+        };
+        this.MoveAnimationState.CompleteFunction = () =>
+        {
+            Move((int)(Window.Width * ((right = !right) ? 0.2f : -0.2f)), null, MainScene.MonitoringTextPositionChangeTime * 2);
+        };
+    }
+
+    bool right = new Random().Next(1) == 0;
+
+    UserNotificationListener listener = UserNotificationListener.Current;
+    UserNotificationListenerAccessStatus accessStatus;
+
+    IReadOnlyList<UserNotification> notifs = null!;
+
+    public override async void Start()
+    {
+        base.Start();
+        if (!ApiInformation.IsTypePresent("Windows.UI.Notifications.Management.UserNotificationListener")) ((Scene)this.InheritedObject!).RemoveSprite(this);
+        accessStatus = await listener.RequestAccessAsync();
+        if (accessStatus != UserNotificationListenerAccessStatus.Allowed)
+        {
+            ((Scene)this.InheritedObject!).RemoveSprite(this);
+        }
+        Move((int)(Window.Width * (right ? 0.2f : -0.2f)), null, MainScene.MonitoringTextPositionChangeTime);
+        Update(0);
+    }
+
+    public override void Resize()
+    {
+        this.Size = (int)(16 * Window.AppropriateSize);
+        this.Y = (int)(Window.Height * 0.25f);
+        this.MoveAnimationState.ModifyArrivalPoint((int)(Window.Width * (right ? 0.2f : -0.2f)), null);
+        base.Resize();
+    }
+
+    float uptime = 0f;
+
+    int i,j;
+
+    string info = string.Empty;
+
+    bool removed = false,needsetopacity = true;
+
+    public void KeyDown(Keycode key)
+    {
+        if (notifs.Count == 0 || key != Keycode.BACKSPACE) return;
+        removed = true;
+        this.Text = "(알림을 삭제했습니다.)";
+        for (j = 0; j < notifs.Count; j++)
+        {
+            listener.RemoveNotification(notifs[j].Id);
+        }
+        this.Opacity(0, 300f, 1000f);
+    }
+
+    public override async void Update(float ms)
+    {
+        if (uptime < Framework.RunningTime)
+        {
+            uptime += 2000f;
+            if (removed) return;
+            notifs = await listener.GetNotificationsAsync(NotificationKinds.Toast);
+            if (notifs.Count == 0)
+            {
+                this.Opacity(0, 300f);
+            }
+            else
+            {
+                this.Hide = false;
+                if (notifs.Count < 3)
+                {
+                    info = "알림: ";
+                    for (i = 0; i < notifs.Count; i++)
+                    {
+                        info += notifs[i].AppInfo.DisplayInfo.DisplayName;
+                        if (i < notifs.Count - 1)
+                        {
+                            info += ", ";
+                        }
+                    }
+                    this.Text = info;
+                }
+                else
+                {
+                    this.Text = $"{notifs.Count}개의 알림이 왔습니다.";
+                }
+                if (needsetopacity)
+                {
+                    this.Opacity(255, 300f);
+                }
+            }
+        }
+        base.Update(ms);
     }
 }
