@@ -7,12 +7,16 @@ using AlwaysOnDisplay;
 using Windows.UI.Notifications.Management;
 using Windows.UI.Notifications;
 using Windows.Foundation.Metadata;
+using NAudio.CoreAudioApi;
+using NAudio.CoreAudioApi.Interfaces;
+using System.Runtime.InteropServices;
 
 class Program
 {
     public static Clock cc = null!;
     public static MainScene ms = null!;
     public static Welcome wc = null!;
+    public static ColorFill cf = null!;
     
     static void Main(string[] args)
     {
@@ -29,6 +33,10 @@ class Program
         {
             AlwaysOnDisplay.Properties.Resources.Jyunrcaea_FrameworkIcon.Save("cache\\icon.png");
         }
+        if (!File.Exists("cache\\color.png"))
+        {
+            AlwaysOnDisplay.Properties.Resources.colorer.Save("cache\\color.png");
+        }
         Framework.MultiCoreProcess = true;
         Framework.BackgroundColor = new(0, 0, 0);
         Framework.Init("Always On Display", 960, 614, null, null, new(true,false,false,true));
@@ -40,10 +48,11 @@ class Program
             Window.Icon("cache\\icon.png");
             Display.AddScene(ms = new MainScene());
             Display.AddScene(cc = new Clock());
+            Display.AddScene(cf = new());
             Display.AddScene(new WindowStatus());
             Framework.Function.Resize();
             Display.RemoveScene(wc);
-            ms.Hide = cc.Hide = false;
+            ms.Hide = cc.Hide = cf.Hide = false;
         });
         Framework.Run();
     }
@@ -227,11 +236,12 @@ class BatteryStatus : TextboxForAnimation
 
     bool top = true;
 
-    BatteryStatusInfo info;
+    BatteryStatusInfo info = null!;
 
-    public override void Update(float ms)
+    public override async void Update(float ms)
     {
-        if (Uptime < Framework.RunningTime) {
+        if (Uptime < Framework.RunningTime) await Task.Run(() =>
+        {
             Uptime += 1500f;
             info = Program.GetBattery();
             switch(info.bs)
@@ -244,10 +254,10 @@ class BatteryStatus : TextboxForAnimation
                     this.Text = "충전이 완료되었습니다.";
                     break;
                 case 4:
-                    this.Text = $"배터리가 부족합니다. 전원을 연결하세요. (배터리 잔량: {info.ecr}%, 남은 시간: {info.ecr}분)";
+                    this.Text = $"배터리가 부족합니다. 전원을 연결하세요. (배터리 잔량: {info.ecr}%, 남은 시간: {info.ert}분)";
                     break;
                 case 5:
-                    this.Text = $"배터리가 매우 부족합니다. 전원을 연결하세요. (배터리 잔량: {info.ecr}%, 남은 시간: {info.ecr}분)";
+                    this.Text = $"배터리가 매우 부족합니다. 전원을 연결하세요. (배터리 잔량: {info.ecr}%, 남은 시간: {info.ert}분)";
                     break;
                 case 9:
                 case 8:
@@ -256,10 +266,10 @@ class BatteryStatus : TextboxForAnimation
                     this.Text = $"충전중입니다. (배터리 잔량 {info.ecr}%)";
                     break;
                 default:
-                    this.Text = $"배터리 잔량: {info.ecr}% (남은 시간: {info.ecr}분)";
+                    this.Text = $"배터리 잔량: {info.ecr}% (남은 시간: {info.ert}분)";
                     break;
             }
-        }
+        });
         base.Update(ms);
     }
 
@@ -538,6 +548,7 @@ class MainScene : Scene
         this.AddSprite(new CPUcounter());
         this.AddSprite(new Ramcounter());
         this.AddSprite(new NoticeText());
+        //this.AddSprite(new PlayingMusic());
     }
 
     public static bool wf = false;
@@ -613,6 +624,58 @@ class StateText : TextboxForAnimation
         };
     }
 
+}
+
+[Obsolete("재생중인지 확인하는 객체인데... 어딘가 이상함")]
+class PlayingMusic : TextboxForAnimation
+{
+    MMDeviceEnumerator enumerator = new MMDeviceEnumerator();
+    MMDevice device;
+
+    AudioSessionControl session = null!;
+
+    public PlayingMusic() : base("cache\\font.ttf",0)
+    {
+        device = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+        for(int i =0; i < device.AudioSessionManager.Sessions.Count; i++)
+        {
+            if (device.AudioSessionManager.Sessions[i].IsSystemSoundsSession == false && device.AudioSessionManager.Sessions[i].State == AudioSessionState.AudioSessionStateActive)
+            {
+                session = device.AudioSessionManager.Sessions[i]; break;
+            }
+        }
+    }
+
+    float uptime = 0f;
+
+    public override void Resize()
+    {
+        this.Size = (int)(16 * Window.AppropriateSize);
+        this.Y = (int)(Window.Height * 0.3f);
+        base.Resize();
+    }
+
+    public override void Update(float ms)
+    {
+        if (uptime < Framework.RunningTime)
+        {
+            uptime += 2000f;
+            if (session != null)
+            {
+                string sessionName = session.DisplayName;
+                string processName = Process.GetProcessById((int)session.GetProcessID).ProcessName;
+                //var state = Process.GetProcessById((int)session.GetProcessID).;
+
+                // Print the information to the console
+                this.Text = "현재 재생중: " + sessionName + " (프로그램 '" + processName + "' 에서)";
+            }
+            else
+            {
+                this.Text = "재생중인 노래가 없습니다.";
+            }
+        }
+        base.Update(ms);
+    }
 }
 
 class StateBackground : RectangleForAnimation
@@ -810,5 +873,50 @@ class NoticeText : TextboxForAnimation, KeyDownEventInterface
             }
         }
         base.Update(ms);
+    }
+}
+
+class ColorFill : Canvas
+{
+    TextureFromFile t;
+    RectSize s = new();
+
+    bool opup = false;
+
+    public ColorFill()
+    {
+        AddUsingTexture(t = new("cache\\color.png"));
+        t.Opacity = 80;
+        this.Hide = true;
+    }
+
+    public override void Resize()
+    {
+        s.Width = Window.Width;
+        s.Height = Window.Height;
+        base.Resize();
+    }
+
+    public override void Render()
+    {
+        Renderer.BlendMode(Renderer.BlendType.Mul);
+        Renderer.Texture(t, s);
+    }
+
+    float uptime = 0f;
+
+    public override void Update(float millisecond)
+    {
+        if (uptime > Framework.RunningTime) return;
+        uptime += 100f;
+        if (opup)
+        {
+            this.t.Opacity++;
+            if (this.t.Opacity >= 100) { opup = false; uptime += 800f; }
+        } else
+        {
+            this.t.Opacity--;
+            if (this.t.Opacity <= 0) { opup = true; uptime += 500f; }
+        }
     }
 }
